@@ -1,0 +1,74 @@
+{% assign CART_TOTAL  = cart.total_price %} 
+// The cart value is in cents, so 3500 - $35
+{% assign CART_35  = 3500 %}
+{% assign CART_75  = 7500 %}
+
+{%  if CART_TOTAL >= CART_35 and CART_TOTAL <= CART_75 %}
+    {% assign product = all_products['free-bee-stamp'] %}
+    {% assign productRmv = all_products['free-bee-stamp-and-die-set'] %}
+{%  elsif CART_TOTAL >= CART_75  %}
+    {% assign product = all_products['free-bee-stamp-and-die-set'] %}
+    {% assign productRmv = all_products['free-bee-stamp'] %}
+{% else %}
+  {% assign product = all_products['free-bee-stamp'] %}
+  {% assign productRmv = all_products['free-bee-stamp-and-die-set'] %}
+{%  endif %}
+
+{% assign variant_id = product.variants.first.id %}
+{% assign variant_old_id = productRmv.variants.first.id %}
+
+<script>
+(function($) {
+  var cartItems = {{ cart.items | json }},
+        qtyInTheCart = 0,
+        cartUpdates = {};
+{% if cart.item_count > 0 and cart.total_price > CART_35 and product.variants.first.available == true %}
+  for (var i=0; i<cartItems.length; i++) {
+      if ( cartItems[i].id === {{ variant_id }}) {
+        qtyInTheCart = cartItems[i].quantity;
+        break;
+      }
+    }
+    if (qtyInTheCart == 0) {
+      cartUpdates = { 
+        {{ variant_old_id }}: 0,
+        {{ variant_id }}: 1
+      };  
+   
+      var params = {
+        type: 'POST',
+        url: '/cart/update.js',
+        data: { updates: cartUpdates },
+        dataType: 'json',
+        success: function(stuff) { 
+          window.location.href = '/cart';
+        }
+      };  
+      $.ajax(params);
+    }
+{% elsif cart.total_price < CART_35 %}
+  for (var i=0; i<cartItems.length; i++) {
+    if ( cartItems[i].id === {{ variant_id }} || cartItems[i].id === {{ variant_old_id }}) {
+      qtyInTheCart = cartItems[i].quantity;
+      break;
+    }
+  }
+  cartUpdates = { 
+    {{ variant_old_id }}: 0,
+    {{ variant_id }}: 0
+  };    
+  if (qtyInTheCart > 0) {
+    var params = {
+      type: 'POST',
+      url: '/cart/update.js',
+      data: { updates: cartUpdates },
+      dataType: 'json',
+      success: function(stuff) { 
+        window.location.href = '/cart';
+      }
+    };  
+    $.ajax(params);
+  }
+{% endif %}
+})(jQuery);
+</script>
